@@ -2,19 +2,19 @@
 
 ## Overzicht
 
-Dit project haalt LDR-sensorwaarden op via de Rubu IoT API, zet de ruwe JSON om naar een pandas DataFrame en toont zowel een tijdreeksplot als een overzichtstabel met kernstatistieken (gemiddelde, minimum, maximum, mediaan, standaarddeviatie, aantal metingen en de exacte tijdsdekking). De code is opgezet met een basisklasse (`SensorHistory`) en een afgeleide klasse (`LdrHistory`) zodat andere sensoren eenvoudig kunnen worden toegevoegd.
+Dit project haalt LDR-sensorwaarden op via de Rubu IoT API, zet de ruwe JSON om naar een pandas DataFrame en toont zowel een tijdreeksplot als een overzichtstabel met kernstatistieken (gemiddelde, minimum, maximum, mediaan, standaarddeviatie, aantal metingen en de exacte tijdsdekking). De code is opgezet met een basisklasse (`SensorHistory`) en een afgeleide klasse (`LdrHistory`).
 
 ## Belangrijkste functies
 
 - Automatisch tijdsinterval bepalen op basis van de gevraagde historie (standaard 24 uur in `main.py`).
 - Authenticated API-call (`requests`) met parsing naar pandas DataFrame.
 - Gecombineerde matplotlib-figuur met grafiek + compacte statistiektabel.
-- Polymorfe workflow (`render_history`) zodat nieuwe sensortypes dezelfde pipeline kunnen gebruiken.
+- Polymorfe workflow (`render_history`).
 
 ## Vereisten
 
 - Python 3.10 of hoger.
-- Packages: `pandas`, `matplotlib`, `requests` (installeer via `pip install -r requirements.txt` indien aanwezig, of installeer de drie pakketten handmatig).
+- Packages: `pandas`, `matplotlib`, `requests`.
 - Geldige API-key voor de Rubu IoT endpoint.
 
 ## Installatie
