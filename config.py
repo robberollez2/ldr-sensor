@@ -13,8 +13,3 @@ BASE_URL: str = "https://www.rubu.be/iot/co2/api.php"
 
 # Formaat voor begin/eind in de URL
 TIME_FORMAT: str = "%Y-%m-%d %H:%M"
-
-# MongoDB instellingen 
-MONGO_URI: str = "mongodb://localhost:27017"
-DB_NAME: str = "ldr_project"
-COLLECTION_NAME: str = "ldr_readings"

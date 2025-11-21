@@ -44,7 +44,7 @@ class SensorHistory:
 
         return frame
 
-    def plot(self, frame: pd.DataFrame):
+    def plot(self, frame: pd.DataFrame, summary: pd.DataFrame | None = None):
         # Wordt overschreven in afgeleide klasses; hier moet de plot gestopt worden
         raise NotImplementedError("Derived class must implement plotting.")
 
@@ -155,13 +155,22 @@ class LdrHistory(SensorHistory):
         return summary
 
 # -------------------------------------------------------------
+# Hulpfunctie voor polymorf verwerking van sensorhistory
+# -------------------------------------------------------------
+def render_history(history: SensorHistory):
+    # Roept fetch/plot aan via het basistype zodat afgeleide klasses polymorf gedrag kunnen leveren
+    df = history.fetch()
+    print(df, "\n")
+    df.info()
+
+    summary = getattr(history, "summarize", None)
+    summary_table = summary(df) if callable(summary) else None
+    history.plot(df, summary_table)
+
+
+# -------------------------------------------------------------
 # Uitvoeren wanneer het script direct wordt gestart
 # -------------------------------------------------------------
 if __name__ == "__main__":
-    history = LdrHistory(hours_back=24)  # Maak een instantie voor laatste 12 uur
-    df = history.fetch()  # Haal data op
-
-    print(df, "\n")  # Print volledige DataFrame
-    df.info()  # Geef informatie over het DataFrame
-    summary_table = history.summarize(df)
-    history.plot(df, summary_table)  # Toon grafiek + tabel in één figuur
+    history = LdrHistory(hours_back=48)
+    render_history(history)
