@@ -14,7 +14,7 @@ Dit project haalt LDR-sensorwaarden op via de Rubu IoT API, zet de ruwe JSON om 
 ## Vereisten
 
 - Python 3.10 of hoger.
-- Packages: `pandas`, `matplotlib`, `requests` (installeer via `pip install -r requirements.txt` indien aanwezig, of installeer de drie pakketten handmatig).
+- Packages: `pandas`, `matplotlib`, `requests`.
 - Geldige API-key voor de Rubu IoT endpoint.
 
 ## Installatie
