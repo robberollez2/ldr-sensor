@@ -46,11 +46,6 @@ Pas `LdrHistory(hours_back=...)` in `main.py` aan als je over een ander tijdsven
    ```
 3. De console toont de ruwe DataFrame en metadata via `df.info()`. Daarna verschijnt een matplotlib-venster met de LDR-grafiek en daaronder de statistische tabel.
 
-## Uitbreiden
-
-- Maak een nieuwe klasse die `SensorHistory` erft (bijv. `TempHistory`) en implementeer minstens `build_url` en `plot` (optioneel `summarize`).
-- Roep `render_history(YourNewHistory(...))` aan in `__main__` om dezelfde pipeline te gebruiken zonder extra code.
-
 ## Problemen oplossen
 
 - **Geen data of HTTP-fout:** controleer `API_KEY`, netwerk en of `BASE_URL` bereikbaar is.
