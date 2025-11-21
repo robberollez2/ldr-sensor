@@ -2,14 +2,14 @@
 
 ## Overzicht
 
-Dit project haalt LDR-sensorwaarden op via de Rubu IoT API, zet de ruwe JSON om naar een pandas DataFrame en toont zowel een tijdreeksplot als een overzichtstabel met kernstatistieken (gemiddelde, minimum, maximum, mediaan, standaarddeviatie, aantal metingen en de exacte tijdsdekking). De code is opgezet met een basisklasse (`SensorHistory`) en een afgeleide klasse (`LdrHistory`) zodat andere sensoren eenvoudig kunnen worden toegevoegd.
+Dit project haalt LDR-sensorwaarden op via de Rubu IoT API, zet de ruwe JSON om naar een pandas DataFrame en toont zowel een tijdreeksplot als een overzichtstabel met kernstatistieken (gemiddelde, minimum, maximum, mediaan, standaarddeviatie, aantal metingen en de exacte tijdsdekking). De code is opgezet met een basisklasse (`SensorHistory`) en een afgeleide klasse (`LdrHistory`).
 
 ## Belangrijkste functies
 
 - Automatisch tijdsinterval bepalen op basis van de gevraagde historie (standaard 24 uur in `main.py`).
 - Authenticated API-call (`requests`) met parsing naar pandas DataFrame.
 - Gecombineerde matplotlib-figuur met grafiek + compacte statistiektabel.
-- Polymorfe workflow (`render_history`) zodat nieuwe sensortypes dezelfde pipeline kunnen gebruiken.
+- Polymorfe workflow (`render_history`).
 
 ## Vereisten
 
@@ -46,10 +46,21 @@ Pas `LdrHistory(hours_back=...)` in `main.py` aan als je over een ander tijdsven
    ```
 3. De console toont de ruwe DataFrame en metadata via `df.info()`. Daarna verschijnt een matplotlib-venster met de LDR-grafiek en daaronder de statistische tabel.
 
-## Uitbreiden
+### Statistiektabel
 
-- Maak een nieuwe klasse die `SensorHistory` erft (bijv. `TempHistory`) en implementeer minstens `build_url` en `plot` (optioneel `summarize`).
-- Roep `render_history(YourNewHistory(...))` aan in `__main__` om dezelfde pipeline te gebruiken zonder extra code.
+| Kolom    | Betekenis                                               |
+| -------- | ------------------------------------------------------- |
+| `Stat`   | Afkortingen van de weergegeven statistieken.            |
+| `Waarde` | De numerieke of tekstuele waarde die bij de stat hoort. |
+
+Onderstaande afkortingen worden gebruikt:
+
+- `Gem` – gemiddelde lichtwaarde over het gekozen interval.
+- `Min` / `Max` – minimum en maximum gemeten waarden.
+- `Med` – mediaan; handig als er uitschieters zijn.
+- `Std` – standaarddeviatie (hoeveel de samples schommelen).
+- `Aant. metingen` – totaal aantal records in het venster.
+- `Start` / `Einde` – eerste en laatste timestamp van de dataset.
 
 ## Problemen oplossen
 
