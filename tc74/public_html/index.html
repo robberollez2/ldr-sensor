@@ -26,6 +26,19 @@
         --text-muted: #9ca3af;
         --danger: #f87171;
         --warning: #facc15;
+
+        /* extra variabelen zodat light mode ook echt licht is */
+        --body-gradient-start: #0f172a;
+        --container-gradient-start: #0b1120;
+        --status-pill-bg: rgba(15, 23, 42, 0.85);
+        --messages-bg: #020617;
+        --messages-border: #1e293b;
+        --btn-bg: #1e293b; /* Donkergrijs, geen gradient */
+        --btn-bg-hover: #0f172a; /* Iets donkerdere hoverkleur */
+        --btn-text: #f9fafb;
+        --card-shadow: 0 14px 30px rgba(15, 23, 42, 0.3);
+        --container-shadow: 0 18px 40px rgba(15, 15, 15, 0.6);
+        --container-glow: rgba(59, 130, 246, 0.18);
       }
 
       /* Light mode varianten van de CSS-variabelen */
@@ -40,6 +53,19 @@
         --text-muted: #64748b;
         --danger: #b91c1c;
         --warning: #ca8a04;
+
+        /* aangepaste waarden voor licht thema */
+        --body-gradient-start: #e2e8f0;
+        --container-gradient-start: #ffffff;
+        --status-pill-bg: #e2e8f0;
+        --messages-bg: #ffffff;
+        --messages-border: #cbd5f5;
+        --btn-bg: #0f172a; /* donkere knop op lichte achtergrond */
+        --btn-bg-hover: #020617;
+        --btn-text: #f9fafb;
+        --card-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+        --container-shadow: 0 18px 40px rgba(148, 163, 184, 0.6);
+        --container-glow: rgba(59, 130, 246, 0.08);
       }
 
       * {
@@ -49,7 +75,12 @@
       body {
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
           sans-serif;
-        background: radial-gradient(circle at top, #0f172a, var(--bg) 55%);
+        /* gebruik variabelen i.p.v. hard gecodeerde donkere kleur */
+        background: radial-gradient(
+          circle at top,
+          var(--body-gradient-start),
+          var(--bg) 55%
+        );
         color: var(--text-main);
         margin: 0;
         padding: 24px 16px;
@@ -66,11 +97,11 @@
         border-radius: 20px;
         background: radial-gradient(
           circle at top left,
-          #0b1120,
+          var(--container-gradient-start),
           var(--bg-card) 60%
         );
         border: 1px solid rgba(148, 163, 184, 0.25);
-        box-shadow: 0 25px 60px rgba(15, 23, 42, 0.8);
+        box-shadow: var(--container-shadow);
         position: relative;
         overflow: hidden;
       }
@@ -81,7 +112,7 @@
         inset: -150px;
         background: radial-gradient(
           circle at top right,
-          rgba(59, 130, 246, 0.18),
+          var(--container-glow),
           transparent 55%
         );
         opacity: 0.65;
@@ -135,7 +166,7 @@
         gap: 6px;
         padding: 6px 12px;
         border-radius: 999px;
-        background: rgba(15, 23, 42, 0.85);
+        background: var(--status-pill-bg);
         border: 1px solid rgba(148, 163, 184, 0.35);
         font-size: 12px;
       }
@@ -176,8 +207,8 @@
         padding: 7px 16px;
         border-radius: 999px;
         border: 1px solid rgba(148, 163, 184, 0.5);
-        background: radial-gradient(circle at top left, #0b1120, #020617);
-        color: var(--text-main);
+        background: var(--btn-bg);
+        color: var(--btn-text);
         font-weight: 500;
         font-size: 13px;
         cursor: pointer;
@@ -189,7 +220,9 @@
       }
 
       .btn:hover {
-        border-color: var(--accent);
+        border-color: #000;
+        background: var(--btn-bg-hover);
+        color: #f9fafb;
         box-shadow: 0 10px 22px rgba(15, 23, 42, 0.9);
         transform: translateY(-1px);
       }
@@ -216,7 +249,7 @@
         border-radius: 14px;
         background: var(--bg-card);
         border: 1px solid rgba(148, 163, 184, 0.35);
-        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.3);
+        box-shadow: var(--card-shadow);
       }
 
       .card-header {
@@ -270,13 +303,13 @@
         margin-top: 10px;
         padding: 8px;
         border-radius: 10px;
-        background: #020617;
+        background: var(--messages-bg);
         max-height: 200px;
         overflow-y: auto;
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
           "Liberation Mono", "Courier New", monospace;
         font-size: 11px;
-        border: 1px solid #1e293b;
+        border: 1px solid var(--messages-border);
       }
 
       .message-line {
