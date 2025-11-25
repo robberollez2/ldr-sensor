@@ -9,7 +9,12 @@ from datetime import timedelta
 API_KEY: str = "api-key-placeholder"
 
 # Basis-URL van de API 
-BASE_URL: str = "https://www.rubu.be/iot/co2/api.php"
+BASE_URL = "api-url"
+MQTT_BROKER = "your-broker"
+MQTT_PORT = 1884
+MQTT_TOPIC = "your-topic"
+MQTT_USERNAME = "your-username"
+MQTT_PASSWORD = "your-password"
 
 # Formaat voor begin/eind in de URL
 TIME_FORMAT: str = "%Y-%m-%d %H:%M"
