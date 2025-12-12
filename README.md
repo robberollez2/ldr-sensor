@@ -1,68 +1,86 @@
-# ldr-sensor
+﻿# ldr-sensor
 
-## Overzicht
+Licht- en temperatuurmetingen met MQTT en een eenvoudige Tk/Matplotlib GUI. Er zijn twee stromen:
 
-Dit project haalt LDR-sensorwaarden op via de Rubu IoT API, zet de ruwe JSON om naar een pandas DataFrame en toont zowel een tijdreeksplot als een overzichtstabel met kernstatistieken (gemiddelde, minimum, maximum, mediaan, standaarddeviatie, aantal metingen en de exacte tijdsdekking). De code is opgezet met een basisklasse (`SensorHistory`) en een afgeleide klasse (`LdrHistory`).
+1. LDR-historiek ophalen via de Rubu IoT API en tonen in een desktop GUI.
+2. TC74-temperatuur via I2C op een Raspberry Pi uitlezen, publiceren op MQTT en live tonen (web en LED-strip).
 
-## Belangrijkste functies
+## Repo-overzicht
 
-- Automatisch tijdsinterval bepalen op basis van de gevraagde historie (standaard 24 uur in `main.py`).
-- Authenticated API-call (`requests`) met parsing naar pandas DataFrame.
-- Gecombineerde matplotlib-figuur met grafiek + compacte statistiektabel.
-- Polymorfe workflow (`render_history`).
+- `scripts/main.py` – Tk GUI met twee grafieken: boven LDR-historiek (API), onder live MQTT-temperature feed.
+- `scripts/ledstrip_micropython.py` – ESP32/APA102-strip die MQTT-temperatuur omzet in kleuren + opstartanimatie.
+- `RPI/temp_test.py` – Raspberry Pi script dat de TC74 via I2C leest en naar MQTT publiceert.
+- `tc74/public_html/` – Kleine webmonitor die via MQTT.js live temperaturen toont (gauge + lijnplot) met thematoggle.
 
-## Vereisten
+## LDR GUI (scripts/main.py)
 
-- Python 3.10 of hoger.
-- Packages: `pandas`, `matplotlib`, `requests`.
-- Geldige API-key voor de Rubu IoT endpoint.
+- Haalt laatste N uur LDR-data op (`LdrHistory(hours_back=48)` standaard).
+- API-call met `requests`, pandas-parsing, Tk/Matplotlib voor de grafiek.
+- Onderste grafiek toont live MQTT-temperaturen (zelfde broker/topic als TC74).
 
-## Installatie
+### Config (`scripts/config.py`)
 
-1. Clone of download deze repository.
-2. (Optioneel) Maak en activeer een virtual environment.
-3. Installeer de benodigde pakketten:
-   ```pwsh
-   pip install pandas matplotlib requests
-   ```
-4. Vul in `config.py` je eigen `API_KEY` in als dat nog niet gebeurd is.
+| Key             | Betekenis                    |
+| --------------- | ---------------------------- |
+| `API_KEY`       | Rubu IoT API key             |
+| `BASE_URL`      | Endpoint voor LDR API        |
+| `TIME_FORMAT`   | Tijdformaat voor begin/einde |
+| `MQTT_BROKER`   | Broker hostnaam              |
+| `MQTT_PORT`     | Broker poort                 |
+| `MQTT_TOPIC`    | Topic voor temperaturen      |
+| `MQTT_USERNAME` | Broker user                  |
+| `MQTT_PASSWORD` | Broker wachtwoord            |
 
-## Configuratie (`config.py`)
+Aanpassen van het tijdsvenster: wijzig `LdrHistory(hours_back=...)` in `main.py`.
 
-| Instelling    | Beschrijving                                                               |
-| ------------- | -------------------------------------------------------------------------- |
-| `API_KEY`     | Persoonlijke sleutel voor authenticatie bij de IoT-API.                    |
-| `BASE_URL`    | Endpoint van de Rubu IoT-service.                                          |
-| `TIME_FORMAT` | Datum/tijd-formaat dat zowel voor requests als voor output wordt gebruikt. |
+### Run (desktop)
 
-Pas `LdrHistory(hours_back=...)` in `main.py` aan als je over een ander tijdsvenster wil rapporteren.
+```pwsh
+pip install pandas matplotlib requests paho-mqtt
+python .\scripts\main.py
+```
 
-## Gebruik
+Tk opent met twee grafieken; de onderste vult zich zodra MQTT-berichten binnenkomen.
 
-1. Zorg dat de vereiste packages geïnstalleerd zijn en dat `config.py` correct is ingevuld.
-2. Voer het script uit:
-   ```pwsh
-   python .\main.py
-   ```
-3. De console toont de ruwe DataFrame en metadata via `df.info()`. Daarna verschijnt een matplotlib-venster met de LDR-grafiek en daaronder de statistische tabel.
+## TC74-keten (temperatuur)
 
-### Statistiektabel
+### Raspberry Pi publisher (`RPI/temp_test.py`)
 
-| Kolom    | Betekenis                                               |
-| -------- | ------------------------------------------------------- |
-| `Stat`   | Afkortingen van de weergegeven statistieken.            |
-| `Waarde` | De numerieke of tekstuele waarde die bij de stat hoort. |
+- Leest TC74 via I2C bus 1 (`TC74_ADDR=0x48`, register `0x00`).
+- Publiceert elke 2s de integer temperatuur naar `MQTT_TOPIC` met `paho.mqtt.client`.
+- Start `client.loop_start()` en logt publish-status. Bij leesfout wordt een melding geprint.
 
-Onderstaande afkortingen worden gebruikt:
+Benodigd: `smbus2`, `RPi.GPIO`, `paho-mqtt`. Voorbeeldinstallatie:
 
-- `Gem` – gemiddelde lichtwaarde over het gekozen interval.
-- `Min` / `Max` – minimum en maximum gemeten waarden.
-- `Med` – mediaan; handig als er uitschieters zijn.
-- `Std` – standaarddeviatie (hoeveel de samples schommelen).
-- `Aant. metingen` – totaal aantal records in het venster.
-- `Start` / `Einde` – eerste en laatste timestamp van de dataset.
+```pwsh
+pip install smbus2 RPi.GPIO paho-mqtt
+```
 
-## Problemen oplossen
+Run op de Pi:
 
-- **Geen data of HTTP-fout:** controleer `API_KEY`, netwerk en of `BASE_URL` bereikbaar is.
-- **Lege grafiek:** mogelijk zijn er geen records in het gekozen tijdsvenster; verhoog `hours_back`.
+```pwsh
+python ./RPI/temp_test.py
+```
+
+### Webmonitor (`tc74/public_html`)
+
+- `index.html` + `app.js` gebruiken MQTT.js + Google Charts.
+- Config komt uit `mqtt-config.php` dat `.env` leest (naast `public_html`).
+- `.env` moet bevatten: `MQTT_BROKER_URL`, `MQTT_TOPIC`, optioneel `MQTT_USERNAME`, `MQTT_PASSWORD`.
+- UI toont live waarde, gauge en max 25 punten geschiedenis; heeft dark/light toggle.
+
+### LED-strip client (`scripts/ledstrip_micropython.py`)
+
+- Richt zich op een ESP32 met APA102 strip (DATA=18, CLOCK=5, 60 leds).
+- WiFi connect, daarna MQTT subscribe op hetzelfde topic.
+- Opstart: regenbooganimatie; bij connect groen knipperen; WiFi-fout rood.
+- Payload wordt naar float geparsed; kleurmapping: <10 wit, 10-17 lichtblauw, 18-22 groen, 23-30 oranje, >30 rood.
+- Animaties via eenvoudige SPI `apa102_write` functie.
+
+Flash naar de ESP32 met MicroPython tooling (bijv. `mpremote cp scripts/ledstrip_micropython.py :main.py`).
+
+## Troubleshooting
+
+- API-fout of lege LDR-data: controleer `API_KEY`, `BASE_URL` en `hours_back`.
+- Geen MQTT data in GUI/web/LED: check broker host/port/credentials en of `temp_test.py` draait.
+- Webmonitor leeg: controleer `.env` pad/inhoud en CORS/hosting (PHP moet `.env` kunnen lezen).
