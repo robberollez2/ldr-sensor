@@ -9,7 +9,7 @@ WIFI_PASSWORD = "VIVES_ELOICT"
 
 # ------- MQTT INSTELLINGEN -------
 MQTT_BROKER = "mqtt.rubu.be"
-MQTT_PORT = 1884
+MQTT_PORT = 1885
 
 MQTT_TOPIC = b"rollezrobbe/temp"
 

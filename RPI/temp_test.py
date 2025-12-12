@@ -15,7 +15,7 @@ TEMP_REG = 0x00
 
 # === MQTT ===
 MQTT_BROKER = "mqtt.rubu.be"    
-MQTT_PORT = 1884
+MQTT_PORT = 1885
 MQTT_TOPIC = "rollezrobbe/temp"   
 MQTT_USERNAME = "rollezrobbe"
 MQTT_PASSWORD = "vm2qdu"

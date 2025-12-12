@@ -1,176 +1,192 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import requests
-from datetime import datetime, timedelta
-import config
+import paho.mqtt.client as mqtt  # MQTT client library
+import config  # Eigen config met API keys en endpoints
+import matplotlib  # Plotting backend
+matplotlib.use("TkAgg")  # Tkinter-backend kiezen voor Matplotlib
+import matplotlib.pyplot as plt  # Plotting functionaliteit
+
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg  # Canvas voor Tk
+import tkinter as tk  # GUI toolkit
+from datetime import datetime, timedelta  # Tijdsfuncties
+from threading import Lock  # Voor thread-safe data toegang
+
+import pandas as pd  # Dataverwerking in tabellen
+import requests  # HTTP requests naar de API
+
 
 # -------------------------------------------------------------
-# Basisklasse voor het ophalen en verwerken van sensorhistorie
+# Basisklasse voor LDR history ophalen
 # -------------------------------------------------------------
 class SensorHistory:
     def __init__(self, hours_back: int):
-        # Slaat op hoeveel uur terug we data willen opvragen
-        self.hours_back = hours_back
+        self.hours_back = hours_back  # Bewaar aantal uren terug
 
     def build_interval(self):
-        # Bepaalt het tijdsinterval (begin en einde) op basis van het aantal uren terug
-        end = datetime.now()  # Huidige tijd
-        begin = end - timedelta(hours=self.hours_back)  # Tijd 'hours_back' uur geleden
-
-        # Formatteert de tijden volgens het ingestelde formaat in config
+        # Huidig tijdstip
+        end = datetime.now()  
+        # Starttijd
+        begin = end - timedelta(hours=self.hours_back)  
         return (
             begin.strftime(config.TIME_FORMAT),
             end.strftime(config.TIME_FORMAT),
         )
 
+    # Implementeren in afgeleide klasse
     def build_url(self, begin: str, end: str) -> str:
-        # Wordt overschreven in afgeleide klasses; hier moet de querystring worden gebouwd
-        raise NotImplementedError("Derived class must provide the query params.")
+        raise NotImplementedError()  
 
     def fetch(self) -> pd.DataFrame:
-        # Haalt de sensorwaarden op binnen het berekende interval
-        begin, end = self.build_interval()
-        url = self.build_url(begin, end)  # Bouwt de volledige API‑URL
+        # Tijdvenster bepalen
+        begin, end = self.build_interval()  
+        # API URL opbouwen
+        url = self.build_url(begin, end)  
+        # Auth header
+        headers = {"X-Api-Key": config.API_KEY}  
+        # HTTP call
+        response = requests.get(url, headers=headers)  
+        # Fout bij niet-200
+        response.raise_for_status()  
 
-        headers = {"X-Api-Key": config.API_KEY}  # Voegt API‑sleutel toe aan de request
-        response = requests.get(url, headers=headers)  # Verstuurd request
-        response.raise_for_status()  # Gooi fout als status niet 200 is
-
-        # Zet het JSON‑antwoord om naar een pandas DataFrame
-        frame = pd.DataFrame.from_dict(response.json()["records"])
-
-        # Converteert 'timestamp' kolom naar een datetime object
-        frame["timestamp"] = pd.to_datetime(frame["timestamp"])
-
-        return frame
-
-    def plot(self, frame: pd.DataFrame, summary: pd.DataFrame | None = None):
-        # Wordt overschreven in afgeleide klasses; hier moet de plot gestopt worden
-        raise NotImplementedError("Derived class must implement plotting.")
+        # JSON -> DF
+        df = pd.DataFrame.from_dict(response.json()["records"])  
+        # Timestamps
+        df["timestamp"] = pd.to_datetime(df["timestamp"])  
+        # DataFrame teruggeven
+        return df  
 
 
-# -------------------------------------------------------------
-# Klasse specifiek voor het ophalen van LDR sensorhistorie
-# -------------------------------------------------------------
 class LdrHistory(SensorHistory):
-    def __init__(self, hours_back: int = 48):
-        # Roept constructor van de basisklasse aan
-        super().__init__(hours_back)
-        self.param = "ldr"  # Naam van de parameter zoals gebruikt in de API
+    # Init base met tijdsvenster
+    def __init__(self, hours_back=48):
+        super().__init__(hours_back)  
+        # Queryparameter voor LDR
+        self.param = "ldr"  
 
-    def build_url(self, begin: str, end: str) -> str:
-        # Bouwt de URL volgens het API‑formaat, met begin‑ en eindtijd meegegeven
-        return f"{config.BASE_URL}?params={self.param}&begin={begin}&end={end}"
-
-    def plot(self, frame: pd.DataFrame, summary: pd.DataFrame | None = None):
-        # Maakt een gecombineerde visualisatie (grafiek + tabel)
-        if summary is None:
-            summary = self.summarize(frame)
-
-        fig, (ax_plot, ax_table) = plt.subplots(
-            nrows=2,
-            ncols=1,
-            figsize=(11, 8),
-            height_ratios=[3, 1.2],
-        )
-
-        frame.plot(
-            x="timestamp",
-            y=[self.param],
-            ax=ax_plot,
-            title=f"LDR Logging T1.18 -- Laatste {self.hours_back}u",
-            xlabel="Datetime",
-            ylabel="LDR waarde",
-            legend=False,
-        )
-        ax_plot.grid(True, linestyle="--", alpha=0.4)
-
-        ax_table.axis("off")
-        table_data = summary.reset_index().rename(
-            columns={"stat": "Stat", "waarde": "Waarde"}
-        )
-        stats = table_data["Stat"].tolist()
-        values = [str(val) for val in table_data["Waarde"].tolist()]
-        table_matrix = [["Stat"] + stats, ["Waarde"] + values]
-        table = ax_table.table(
-            cellText=table_matrix,
-            cellLoc="center",
-            loc="center",
-            bbox=[0.1, 0.05, 0.8, 0.9],
-        )
-        table.auto_set_font_size(False)
-        table.set_fontsize(10)
-        table.scale(2, 1.4)
-
-        for (row, col), cell in table.get_celld().items():
-            cell.PAD = 0.2
-            if row == 0:
-                cell.set_text_props(weight="bold", style="normal")
-            elif col == 0:
-                cell.set_text_props(style="normal")
-            else:
-                cell.set_text_props(style="italic")
-
-        plt.tight_layout()
-        plt.show()  # Toon de grafiek en tabel
-
-    def summarize(self, frame: pd.DataFrame) -> pd.DataFrame:
-        # Bouwt een compacte tabel met kerncijfers over de gekozen periode
-        values = frame[self.param]
-        t_begin = frame["timestamp"].min()
-        t_end = frame["timestamp"].max()
-        duration_hours = round((t_end - t_begin).total_seconds() / 3600, 2)
-
-        summary = pd.DataFrame(
-            {
-                "stat": [
-                    "Gemiddelde",
-                    "Minimum",
-                    "Maximum",
-                    "Mediaan",
-                    "Standaarddeviatie",
-                    "Aantal metingen",
-                ],
-                "waarde": [
-                    round(values.mean(), 3),
-                    round(values.min(), 3),
-                    round(values.max(), 3),
-                    round(values.median(), 3),
-                    round(values.std(ddof=0), 3),
-                    int(values.count()),
-                ],
-            }
-        ).set_index("stat")
-
-        abbreviations = {
-            "Gemiddelde": "Gem",
-            "Minimum": "Min",
-            "Maximum": "Max",
-            "Mediaan": "Med",
-            "Standaarddeviatie": "Std",
-            "Aantal metingen": "N",
-        }
-        summary.index = summary.index.to_series().map(lambda x: abbreviations.get(x, x))
-
-        return summary
-
-# -------------------------------------------------------------
-# Hulpfunctie voor polymorf verwerking van sensorhistory
-# -------------------------------------------------------------
-def render_history(history: SensorHistory):
-    # Roept fetch/plot aan via het basistype zodat afgeleide klasses polymorf gedrag kunnen leveren
-    df = history.fetch()
-    print(df, "\n")
-    df.info()
-
-    summary = getattr(history, "summarize", None)
-    summary_table = summary(df) if callable(summary) else None
-    history.plot(df, summary_table)
+    def build_url(self, begin: str, end: str):
+        # Final API URL
+        return f"{config.BASE_URL}?params={self.param}&begin={begin}&end={end}"  
 
 
 # -------------------------------------------------------------
-# Uitvoeren wanneer het script direct wordt gestart
+# MQTT data buffers
 # -------------------------------------------------------------
+times = []  # Tijdstippen van MQTT metingen
+temps = []  # Waarden van MQTT metingen
+data_lock = Lock()  # Lock voor thread-safe toegang
+
+
+def on_connect(client, userdata, flags, reason_code, properties=None):
+    print("Verbonden met broker:", reason_code)  
+    client.subscribe(config.MQTT_TOPIC)  
+
+
+def on_message(client, userdata, msg):
+    try:
+        value = float(msg.payload.decode())  # Payload naar float
+    except ValueError:
+        print("Ongeldige MQTT waarde:", msg.payload)  # Foutafhandeling
+        return  # Stop bij invalid
+
+    # Huidige timestamp
+    now = datetime.now() 
+    # Met lock zodat alleen één thread tegelijk in de buffer schrijft
+    with data_lock:  
+        times.append(now)  # Tijd opslaan
+        temps.append(value)  # Waarde opslaan
+        if len(times) > 200:  # Buffer beperken
+            times.pop(0)  # Oudste tijd weg
+            temps.pop(0)  # Oudste temperatuur weg
+
+
+# -------------------------------------------------------------
+# GUI met twee grafieken onder elkaar
+# -------------------------------------------------------------
+def make_gui(df_history):
+    root = tk.Tk()  # Hoofdvenster
+    root.title("LDR Historiek (boven) + MQTT Temperatuur (onder)")  # Titel
+
+    # Twee grafieken onder elkaar
+    fig, (ax_hist, ax_mqtt) = plt.subplots(nrows=2, ncols=1, figsize=(10, 7))  # Twee subplots
+    plt.tight_layout()  # Layout netjes
+
+    canvas = FigureCanvasTkAgg(fig, master=root)  # Matplotlib in Tk
+    canvas_widget = canvas.get_tk_widget()  # Canvas widget
+    canvas_widget.pack(fill=tk.BOTH, expand=True)  # Uitrekken in venster
+
+    # ---- Bovenste grafiek (statisch) ----
+    def draw_history():
+        ax_hist.clear()  # Reset as voor historiek
+        if df_history is not None and not df_history.empty:  # Data aanwezig
+            ax_hist.plot(df_history["timestamp"], df_history["ldr"], color="blue")  # Lijnplot
+            ax_hist.set_title(f"LDR logging – laatste {history.hours_back}u")  # Titel
+            ax_hist.set_xlabel("Tijd")  # X-label
+            ax_hist.set_ylabel("LDR-waarde")  # Y-label
+            ax_hist.grid(True, linestyle="--", alpha=0.4)  # Raster
+        else:  # Geen data
+            ax_hist.text(0.5, 0.5, "Geen LDR data gevonden...",
+                         ha="center", va="center", transform=ax_hist.transAxes)  # Placeholder tekst
+
+    # ---- Onderste grafiek (MQTT auto-refresh) ----
+    def refresh_mqtt_graph():
+        with data_lock:  # Thread-safe copy
+            t_copy = list(times)  # Kopie van tijdstempels
+            temp_copy = list(temps)  # Kopie van waarden
+
+        ax_mqtt.clear()  # Reset MQTT plot
+        if t_copy:  # Als er data is
+            ax_mqtt.plot(t_copy, temp_copy, marker="o", color="red")  # Lijn/points
+            ax_mqtt.set_title("MQTT Temperatuur (live)")  # Titel
+            ax_mqtt.set_xlabel("Tijd")  # X-label
+            ax_mqtt.set_ylabel("°C")  # Y-label
+            fig.autofmt_xdate()  # Datum labels kantelen
+        else:  # Geen data ontvangen
+            ax_mqtt.text(0.5, 0.5, "Nog geen MQTT data ontvangen...",
+                         ha="center", va="center", transform=ax_mqtt.transAxes)  # Placeholder
+
+        canvas.draw()  # Canvas bijwerken
+
+    def auto_refresh():
+        refresh_mqtt_graph()  # Herteken MQTT grafiek
+        root.after(1000, auto_refresh)  # elke 1s refresh
+
+    # eerste keer tekenen
+    draw_history()  # Eerste historiek plot
+    canvas.draw()  # Canvas tonen
+
+    # auto-refresh starten
+    auto_refresh()  # Start interval
+
+    return root  # Geef Tk root terug
+
+
+# -------------------------------------------------------------
+# MAIN
+# -------------------------------------------------------------
+def main():
+    global history
+
+    # --- LDR data ophalen ---
+    history = LdrHistory(hours_back=48)  # Historiek over 48u
+    try:
+        df_history = history.fetch()  # Data laden
+    except Exception as e:
+        print("Fout bij ophalen LDR data:", e)  # Foutmelding
+        df_history = pd.DataFrame()  # Lege DF bij fout
+
+    # --- MQTT opzetten ---
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)  # Nieuwe client
+    client.on_connect = on_connect  # Callback connect
+    client.on_message = on_message  # Callback messages
+    client.username_pw_set(config.MQTT_USERNAME, config.MQTT_PASSWORD)  # Auth
+    client.connect(config.MQTT_BROKER, config.MQTT_PORT, 60)  # Verbinden
+    client.loop_start()  # Start async loop
+
+    # --- GUI starten ---
+    root = make_gui(df_history)  # Bouw GUI
+    root.mainloop()  # Start event loop
+
+    client.loop_stop()  # Stop MQTT loop
+    client.disconnect()  # Netjes afsluiten
+
+
 if __name__ == "__main__":
-    history = LdrHistory(hours_back=48)
-    render_history(history)
+    main()
