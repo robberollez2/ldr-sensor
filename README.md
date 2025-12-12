@@ -33,13 +33,6 @@ Licht- en temperatuurmetingen met MQTT en een eenvoudige Tk/Matplotlib GUI. Er z
 
 Aanpassen van het tijdsvenster: wijzig `LdrHistory(hours_back=...)` in `main.py`.
 
-### Run (desktop)
-
-```pwsh
-pip install pandas matplotlib requests paho-mqtt
-python .\scripts\main.py
-```
-
 Tk opent met twee grafieken; de onderste vult zich zodra MQTT-berichten binnenkomen.
 
 ## TC74-keten (temperatuur)
@@ -50,24 +43,13 @@ Tk opent met twee grafieken; de onderste vult zich zodra MQTT-berichten binnenko
 - Publiceert elke 2s de integer temperatuur naar `MQTT_TOPIC` met `paho.mqtt.client`.
 - Start `client.loop_start()` en logt publish-status. Bij leesfout wordt een melding geprint.
 
-Benodigd: `smbus2`, `RPi.GPIO`, `paho-mqtt`. Voorbeeldinstallatie:
-
-```pwsh
-pip install smbus2 RPi.GPIO paho-mqtt
-```
-
-Run op de Pi:
-
-```pwsh
-python ./RPI/temp_test.py
-```
-
 ### Webmonitor (`tc74/public_html`)
 
 - `index.html` + `app.js` gebruiken MQTT.js + Google Charts.
 - Config komt uit `mqtt-config.php` dat `.env` leest (naast `public_html`).
 - `.env` moet bevatten: `MQTT_BROKER_URL`, `MQTT_TOPIC`, optioneel `MQTT_USERNAME`, `MQTT_PASSWORD`.
 - UI toont live waarde, gauge en max 25 punten geschiedenis; heeft dark/light toggle.
+- Website: https://www.robberollez.be/tc74/public_html
 
 ### LED-strip client (`scripts/ledstrip_micropython.py`)
 
@@ -77,10 +59,8 @@ python ./RPI/temp_test.py
 - Payload wordt naar float geparsed; kleurmapping: <10 wit, 10-17 lichtblauw, 18-22 groen, 23-30 oranje, >30 rood.
 - Animaties via eenvoudige SPI `apa102_write` functie.
 
-Flash naar de ESP32 met MicroPython tooling (bijv. `mpremote cp scripts/ledstrip_micropython.py :main.py`).
-
 ## Troubleshooting
 
 - API-fout of lege LDR-data: controleer `API_KEY`, `BASE_URL` en `hours_back`.
 - Geen MQTT data in GUI/web/LED: check broker host/port/credentials en of `temp_test.py` draait.
-- Webmonitor leeg: controleer `.env` pad/inhoud en CORS/hosting (PHP moet `.env` kunnen lezen).
+- Webmonitor leeg: python script draait niet op Raspberry PI.
